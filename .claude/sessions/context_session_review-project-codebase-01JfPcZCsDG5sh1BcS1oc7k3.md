@@ -334,3 +334,144 @@ yarn test:coverage    # Coverage report
 - ✅ Catalogued all entities, value objects, use cases, and adapters
 - ✅ Documented testing strategy and configuration
 - ✅ Created this context file for future reference
+
+### 2025-12-11: Reflexive Chatbot Implementation (AVRQ SURGPT)
+
+**User Request**: Transform the application into a "Chatbot Reflexivo" for SomosSur with the following specifications:
+- Bot Name: "AVRQ SURGPT"
+- Behavior: Socratic questioning (asks questions instead of giving answers)
+- Message Limit: 13 user messages before showing closing message
+- Multiple Endings: 13 unique closing messages (Magic 8-Ball style, randomly selected)
+- Purpose: Combat automatism of consulting AIs without critical thinking
+- Branding: SomosSur visual identity (Sur Black #101820, Sur Blue #1e3fff)
+
+#### Phase 1: Documentation (Completed)
+Created comprehensive documentation in `.claude/doc/reflexive-chatbot/`:
+- ✅ `design.md` - Architectural decisions and technical implementation
+- ✅ `prompt-master.md` - Complete AVRQ SURGPT system prompt and personality
+- ✅ `closing-message.md` - 4 versions of closing messages for review
+- ✅ `closing-messages-collection.md` - 13 unique closing messages with implementation
+- ✅ `ui-guidelines.md` - SomosSur color palette, typography, and component designs
+- ✅ `implementation-plan.md` - 3-week detailed roadmap
+
+#### Phase 2: Backend Implementation (Completed)
+
+**Domain Layer Changes:**
+- ✅ Modified `src/domain/entities/Conversation.ts`:
+  - Added `ConversationMode` type: `'standard' | 'reflexive'`
+  - Added properties: `mode`, `maxMessagesBeforeEnd` (default 13), `hasEnded`
+  - Added reflexive mode methods: `hasReachedLimit()`, `shouldShowEndMessage()`, `end()`, `canContinue()`
+  - Enforced business rules: cannot add messages after conversation ends in reflexive mode
+
+**Infrastructure Layer Changes:**
+- ✅ Created `src/infrastructure/adapters/ai/ReflexivePromptService.ts`:
+  - Manages AVRQ SURGPT socratic personality system prompt
+  - Contains 13 unique closing messages with different tones and philosophical approaches
+  - Provides `getRandomClosingMessage()` for Magic 8-Ball style selection
+  - Provides `getConversationContext()` for contextual prompts based on message count
+- ✅ Removed all tool-related code:
+  - Deleted `ToolInvocation` entity
+  - Removed `IToolRegistry`, `IWeatherService` interfaces
+  - Removed `ToolRegistry`, `WeatherTool` implementations
+  - Removed `ExecuteToolUseCase`
+
+**Application Layer Changes:**
+- ✅ Modified `src/application/use-cases/StreamChatCompletionUseCase.ts`:
+  - Added `ReflexivePromptService` integration
+  - Implemented end message detection and streaming
+  - Created `streamEndMessage()` method for final message delivery
+  - Removed all tool execution logic
+  - Uses reflexive system prompt when in reflexive mode
+- ✅ Modified `src/infrastructure/config/DependencyContainer.ts`:
+  - Removed tool-related dependencies
+  - Simplified constructor (no longer requires toolRegistry)
+
+**Commits:**
+- ✅ Commit 1: "feat: implement reflexive chatbot mode with AVRQ SURGPT" (12ff80b)
+  - Domain: Added ConversationMode and reflexive logic to Conversation entity
+  - Infrastructure: Created ReflexivePromptService with 13 closing messages
+  - Application: Modified StreamChatCompletionUseCase for reflexive mode
+  - Removed: All tool-related code (ToolInvocation, ToolRegistry, WeatherTool, ExecuteToolUseCase)
+
+#### Phase 3: Frontend Implementation (Completed)
+
+**Components Created:**
+- ✅ `app/features/conversation/components/end-modal.tsx`:
+  - Full-screen modal with animated appearance using Framer Motion
+  - Displays closing message with elegant typography
+  - Blocks all interaction (no close button, only "new conversation" action)
+  - Accessible (ARIA roles and labels)
+  - Responsive design with mobile support
+
+**Hooks Modified:**
+- ✅ `app/features/conversation/hooks/useConversation.tsx`:
+  - Added state: `showEndModal`, `endMessage`
+  - Created `useEffect` to detect end messages by checking for key phrases from all 13 closing messages
+  - Implemented `handleNewConversationFromEnd()` callback
+  - Exposed reflexive mode state to components
+
+**Integration:**
+- ✅ `app/features/conversation/components/chat-container.tsx`:
+  - Imported and integrated `EndModal` component
+  - Connected modal to conversation hook state
+  - Modal appears when end message is detected
+
+**Styling:**
+- ✅ `tailwind.config.js`:
+  - Added SomosSur color palette:
+    - `sur.black`: #101820
+    - `sur.blue`: #1e3fff
+    - `sur.grey`: 5 shades from light to dark
+  - Available for use throughout the application
+
+**Commits:**
+- ✅ Commit 2: "feat: implement reflexive mode end modal in frontend" (43a586c)
+  - Created EndModal component with full-screen overlay and animation
+  - Adapted useConversation hook to detect end messages
+  - Integrated EndModal into chat-container component
+  - Added SomosSur color palette to Tailwind config
+
+#### Implementation Summary
+
+**What Changed:**
+1. **Architecture Simplification**: Removed all tool execution functionality
+2. **New Mode**: Added reflexive conversation mode to domain
+3. **Socratic Personality**: Implemented AVRQ SURGPT with questioning methodology
+4. **Message Limit**: Enforced 13-message limit before showing end message
+5. **Multiple Endings**: Created 13 unique closing messages with random selection
+6. **End Modal**: Full-screen modal that blocks interaction and requires new conversation
+7. **Branding**: Added SomosSur colors to design system
+
+**Files Created:**
+- `.claude/doc/reflexive-chatbot/design.md`
+- `.claude/doc/reflexive-chatbot/prompt-master.md`
+- `.claude/doc/reflexive-chatbot/closing-message.md`
+- `.claude/doc/reflexive-chatbot/closing-messages-collection.md`
+- `.claude/doc/reflexive-chatbot/ui-guidelines.md`
+- `.claude/doc/reflexive-chatbot/implementation-plan.md`
+- `src/infrastructure/adapters/ai/ReflexivePromptService.ts`
+- `app/features/conversation/components/end-modal.tsx`
+
+**Files Modified:**
+- `src/domain/entities/Conversation.ts` - Added reflexive mode support
+- `src/application/use-cases/StreamChatCompletionUseCase.ts` - Integrated reflexive prompts
+- `src/infrastructure/config/DependencyContainer.ts` - Removed tools
+- `app/features/conversation/hooks/useConversation.tsx` - Added end modal detection
+- `app/features/conversation/components/chat-container.tsx` - Integrated EndModal
+- `tailwind.config.js` - Added SomosSur colors
+
+**Files Removed:**
+- Tool-related code removed from domain, application, and infrastructure layers
+
+**Testing Status:**
+- ⏳ Manual verification completed (code syntax correct, imports valid)
+- ⏳ Build test pending (network connectivity issues prevented `yarn install`)
+- ⏳ Integration testing pending (requires running application)
+
+**Next Steps:**
+1. Run `yarn install` when network is stable
+2. Run `yarn dev` to test the complete flow
+3. Verify 13-message limit triggers end modal
+4. Test random closing message selection
+5. Verify "new conversation" button works correctly
+6. Update documentation with any findings
