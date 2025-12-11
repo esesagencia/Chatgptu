@@ -82,6 +82,10 @@ export function useConversation(options: UseConversationOptions = {}) {
     }
   }, [onError]);
 
+  // State for reflexive mode end modal
+  const [showEndModal, setShowEndModal] = useState(false);
+  const [endMessage, setEndMessage] = useState('');
+
   // Initialize Vercel AI SDK's useChat
   const {
     messages,
@@ -148,6 +152,52 @@ export function useConversation(options: UseConversationOptions = {}) {
 
     return newId;
   }, [storage, setMessages, setInput, onNewConversation]);
+
+  /**
+   * Handle closing end modal and starting new conversation
+   */
+  const handleNewConversationFromEnd = useCallback(() => {
+    setShowEndModal(false);
+    setEndMessage('');
+    startNewConversation();
+  }, [startNewConversation]);
+
+  /**
+   * Detect reflexive mode end message
+   * Checks if the last assistant message indicates conversation has ended
+   */
+  useEffect(() => {
+    if (messages.length === 0) return;
+
+    const lastMessage = messages[messages.length - 1];
+
+    // Check if it's an assistant message and contains reflexive end indicators
+    if (lastMessage.role === 'assistant') {
+      const content = lastMessage.content;
+
+      // Check for key phrases that indicate end message
+      const isEndMessage =
+        content.includes('La respuesta que buscas no está aquí') ||
+        content.includes('Bienvenido al centro de la campana') ||
+        content.includes('13 preguntas') ||
+        content.includes('En Sur no creemos en el norte') ||
+        content.includes('Llevas 13 mensajes delegando') ||
+        content.includes('Esto era un experimento') ||
+        content.includes('Me has preguntado qué hacer') ||
+        content.includes('Lo cómodo es preguntar') ||
+        content.includes('En SomosSur tenemos una frase') ||
+        content.includes('Has hecho 13 preguntas') ||
+        content.includes('Soy una máquina') ||
+        content.includes('Has buscado un atajo') ||
+        content.includes('Esta es la última pregunta');
+
+      if (isEndMessage && !showEndModal) {
+        console.log('[useConversation] Detected reflexive end message');
+        setEndMessage(content);
+        setShowEndModal(true);
+      }
+    }
+  }, [messages, showEndModal]);
 
   /**
    * Enhanced handleSubmit that includes conversation start tracking
@@ -279,6 +329,11 @@ export function useConversation(options: UseConversationOptions = {}) {
     // Loading state
     isLoadingConversation,
     loadError,
+
+    // Reflexive mode state
+    showEndModal,
+    endMessage,
+    handleNewConversationFromEnd,
 
     // Message operations
     setMessages,
