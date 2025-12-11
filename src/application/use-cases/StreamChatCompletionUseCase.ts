@@ -38,14 +38,6 @@ export class StreamChatCompletionUseCase {
         throw new Error('Conversation not found');
       }
 
-      // Check if reflexive conversation should show end message
-      if (conversation.isReflexiveMode() && conversation.shouldShowEndMessage()) {
-        await this.streamEndMessage(conversation, controller);
-        conversation.end();
-        await this.conversationRepository.save(conversation);
-        return;
-      }
-
       // Check if conversation can continue
       if (conversation.isReflexiveMode() && !conversation.canContinue()) {
         throw new Error('Conversation has ended. Please start a new conversation.');
@@ -62,12 +54,26 @@ export class StreamChatCompletionUseCase {
       // Prepare AI request with reflexive prompt if needed
       const messages = [...conversation.getMessages()];
 
+      // Determine system prompt based on conversation state
+      let systemPrompt: string | undefined;
+      let isClosingMessage = false;
+
+      if (conversation.isReflexiveMode()) {
+        if (conversation.shouldShowEndMessage()) {
+          // This is the 13th message - use the closing prompt
+          const conversationTopic = this.extractConversationTopic(messages);
+          systemPrompt = this.reflexivePromptService.getClosingPrompt(conversationTopic);
+          isClosingMessage = true;
+        } else {
+          // Normal reflexive prompt
+          systemPrompt = this.reflexivePromptService.getSystemPrompt();
+        }
+      }
+
       const request: AICompletionRequest = {
         messages,
         model: 'gpt-4o',
-        systemPrompt: conversation.isReflexiveMode()
-          ? this.reflexivePromptService.getSystemPrompt()
-          : undefined,
+        systemPrompt,
       };
 
       // Stream completion
@@ -102,11 +108,20 @@ export class StreamChatCompletionUseCase {
                 streamingResponse
               );
 
+              // If this is a closing message, end the conversation
+              if (isClosingMessage) {
+                conversation.end();
+              }
+
               // Save conversation with assistant message
               await this.conversationRepository.save(conversation);
 
-              // Stream finish event
-              this.streamFinish(chunk.usage, controller);
+              // Stream finish event with special flag for closing message
+              if (isClosingMessage) {
+                this.streamClosingFinish(chunk.usage, controller);
+              } else {
+                this.streamFinish(chunk.usage, controller);
+              }
             }
             break;
 
@@ -129,42 +144,23 @@ export class StreamChatCompletionUseCase {
   }
 
   /**
-   * Streams the end message for reflexive mode
+   * Extracts the main topic of conversation from the message history
+   * This is used to generate a contextual closing message
    */
-  private async streamEndMessage(
-    conversation: Conversation,
-    controller: ReadableStreamDefaultController
-  ): Promise<void> {
-    const endMessage = this.reflexivePromptService.getRandomClosingMessage();
-
-    // Stream the end message as text
-    this.streamText(endMessage, controller);
-
-    // Create assistant message with end message
-    const assistantMessage = Message.create(
-      MessageRole.assistant(),
-      MessageContent.from(endMessage),
-      []
+  private extractConversationTopic(messages: Message[]): string | undefined {
+    // Get the first user message as it usually contains the main topic
+    const firstUserMessage = messages.find(
+      (msg) => msg.getRole().getValue() === 'user'
     );
 
-    // Add to conversation
-    conversation.addMessage(assistantMessage);
+    if (!firstUserMessage) {
+      return undefined;
+    }
 
-    // Stream finish event with special metadata
-    const data: StreamData = {
-      type: 'finish',
-      payload: {
-        finishReason: 'reflexive_end',
-        usage: {
-          promptTokens: 0,
-          completionTokens: endMessage.length / 4, // Rough estimate
-          totalTokens: endMessage.length / 4,
-        },
-        isContinued: false,
-        isReflexiveEnd: true,
-      },
-    };
-    this.streamAdapter.write(controller, data);
+    const content = firstUserMessage.getContent().getValue();
+
+    // Return a summary (first 100 chars for context)
+    return content.substring(0, 150);
   }
 
   private streamText(content: string, controller: ReadableStreamDefaultController): void {
@@ -185,6 +181,25 @@ export class StreamChatCompletionUseCase {
         finishReason: 'stop',
         usage,
         isContinued: false,
+      },
+    };
+    this.streamAdapter.write(controller, data);
+  }
+
+  /**
+   * Streams finish event for closing message with special metadata
+   */
+  private streamClosingFinish(
+    usage: TokenUsage,
+    controller: ReadableStreamDefaultController
+  ): void {
+    const data: StreamData = {
+      type: 'finish',
+      payload: {
+        finishReason: 'reflexive_end',
+        usage,
+        isContinued: false,
+        isReflexiveEnd: true,
       },
     };
     this.streamAdapter.write(controller, data);

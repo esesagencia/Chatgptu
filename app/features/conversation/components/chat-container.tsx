@@ -8,7 +8,6 @@ import { useConversation } from '../hooks/useConversation';
 import { useScrollToBottom } from '@/hooks/use-scroll-to-bottom';
 import { Chat } from './chat';
 import { useConversationHandlers } from '../hooks/useConversationHandlers';
-import { EndModal } from './end-modal';
 
 /**
  * Container component that manages chat state and business logic
@@ -68,14 +67,5 @@ export function ChatContainer() {
     messagesEndRef,
   };
 
-  return (
-    <>
-      <Chat {...chatProps} />
-      <EndModal
-        isOpen={conversation.showEndModal}
-        message={conversation.endMessage}
-        onNewConversation={conversation.handleNewConversationFromEnd}
-      />
-    </>
-  );
+  return <Chat {...chatProps} />;
 }

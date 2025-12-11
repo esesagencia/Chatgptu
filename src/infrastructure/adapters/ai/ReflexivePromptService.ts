@@ -386,4 +386,43 @@ Hoy piensas tú.`,
   public getClosingMessageCount(): number {
     return this.closingMessages.length;
   }
+
+  /**
+   * Generates a contextual closing prompt for the AI to create a personalized ending
+   * This prompt will make the AI generate a closing message based on the conversation topic
+   */
+  public getClosingPrompt(conversationTopic?: string): string {
+    const topicContext = conversationTopic
+      ? `El usuario ha estado hablando sobre: ${conversationTopic}.`
+      : 'El usuario ha estado conversando contigo durante 13 mensajes.';
+
+    return `
+INSTRUCCIONES ESPECIALES - MENSAJE DE CIERRE:
+
+${topicContext}
+
+Ha llegado el momento de cerrar esta conversación reflexiva con el mensaje número 13.
+
+Tu tarea es generar un mensaje de cierre que:
+
+1. **Mantenga el espíritu reflexivo**: Recuérdale que cada vez más el uso de IA homogeneiza las decisiones y reduce el pensamiento crítico. Que debe creer más en sí mismo, en lo que siente, en lo que le inspira.
+
+2. **Sea contextual**: Menciona brevemente el tema del que han estado hablando y cómo aplica este principio a su situación específica.
+
+3. **Sea personal y directo**: No uses los 13 mensajes predeterminados. Genera un mensaje único basado en esta conversación.
+
+4. **Termine con un hipervínculo**: Al final del mensaje, agrega EXACTAMENTE este texto (respeta el formato markdown):
+
+"Si crees que necesitas más ayuda para [completa con el tema específico de la conversación], puedes [mejorar tu plan aquí](https://somossur.es/mejora-tu-plan)."
+
+IMPORTANTE:
+- El mensaje debe ser profundo pero no sermoneador
+- Máximo 6-8 líneas de texto
+- El hipervínculo debe aparecer en una línea separada al final
+- Usa "tú" en lugar de "usted"
+- Mantén un tono cercano y humano
+
+Genera ahora el mensaje de cierre:
+    `.trim();
+  }
 }
