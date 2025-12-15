@@ -74,6 +74,7 @@ export class StreamChatCompletionUseCase {
         messages,
         model: 'gpt-4o',
         systemPrompt,
+        tools: [], // No tools in reflexive mode
       };
 
       // Stream completion
